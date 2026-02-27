@@ -136,7 +136,7 @@ function SummaryCard({
       </div>
       <div>
         <p className="text-xs text-muted leading-tight">{label}</p>
-        <p className="text-xl font-semibold mt-0.5 tabular-nums" style={{ color: c.value }}>
+        <p className="text-base sm:text-xl font-semibold mt-0.5 tabular-nums leading-tight break-all" style={{ color: c.value }}>
           {value}
         </p>
         {sub && <p className="text-[11px] text-subtle mt-0.5">{sub}</p>}
@@ -256,12 +256,12 @@ function ConditionsSection({
   return (
     <div className="space-y-2.5">
       {rows.map(({ icon: Icon, label, value }) => (
-        <div key={label} className="flex items-center justify-between text-sm">
-          <span className="flex items-center gap-2 text-muted">
+        <div key={label} className="flex items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-1.5 text-muted min-w-0 flex-1">
             <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-            {label}
+            <span className="leading-snug">{label}</span>
           </span>
-          <span className="font-medium text-navy">{value}</span>
+          <span className="font-medium text-navy text-right shrink-0">{value}</span>
         </div>
       ))}
 
@@ -271,12 +271,12 @@ function ConditionsSection({
           <div className="pt-1 border-t border-border-base" />
           <p className="text-xs font-medium text-muted">子どもの教育費</p>
           {data.children.map((c: Child, i: number) => (
-            <div key={c.id} className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-muted">
+            <div key={c.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-1.5 text-muted min-w-0 flex-1">
                 <User className="w-3.5 h-3.5 flex-shrink-0" />
-                {i + 1}人目{c.currentAge ? `（${c.currentAge}歳）` : ''}
+                <span>{i + 1}人目{c.currentAge ? `（${c.currentAge}歳）` : ''}</span>
               </span>
-              <span className="font-medium text-navy">
+              <span className="font-medium text-navy text-right shrink-0">
                 {EDUCATION_COURSE_LABELS[c.educationCourse] ?? c.educationCourse}
                 {c.educationCourse === 'custom' && c.customAnnualAmount
                   ? ` ${c.customAnnualAmount}万/年`
@@ -295,12 +295,12 @@ function ConditionsSection({
           {enabledExpenses.map((e: MajorExpense) => {
             const Icon = EXPENSE_ICONS[e.id] ?? Plus
             return (
-              <div key={e.id} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted">
+              <div key={e.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="flex items-center gap-1.5 text-muted min-w-0 flex-1">
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                  {e.label}
+                  <span>{e.label}</span>
                 </span>
-                <span className="font-medium text-navy">
+                <span className="font-medium text-navy text-right shrink-0">
                   {e.amount}万円
                   {e.targetAge && (
                     <span className="text-muted font-normal ml-1">({e.targetAge}歳)</span>
@@ -416,17 +416,17 @@ export default function DashboardPage() {
         <motion.div {...fadeUp(0.32)}>
           <Card className="p-5">
             {/* カードヘッダー */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold text-navy flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
+                  <TrendingUp className="w-4 h-4 shrink-0" />
                   資産推移グラフ
                 </h2>
                 <p className="text-xs text-muted mt-0.5">
                   {data.age || '30'}歳 〜 100歳までのシミュレーション
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium"
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0"
                 style={{ backgroundColor: '#e6f0ff', color: '#003366' }}>
                 <span>利回り {investmentRate}%</span>
                 <span className="text-navy/40">|</span>
