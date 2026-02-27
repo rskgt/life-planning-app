@@ -57,10 +57,21 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   overflow-x: hidden;
+}
+
+/* ─── iOS Safari での入力フォーカス時ズームを防止（16px 未満で自動ズームが発生する） ─── */
+input:not([type="range"]),
+select,
+textarea {
+  font-size: 16px;
 }
 
 /* ─── range スライダーのクロスブラウザ共通スタイル ─── */

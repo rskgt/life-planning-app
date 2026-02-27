@@ -139,33 +139,13 @@ export default function OnboardingEditPage() {
         </Card>
 
         {/* ── ナビゲーションボタン ── */}
-        <div className="flex gap-3">
-          {/* 戻るボタン */}
-          {step > 0 ? (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handlePrev}
-              className="flex-1"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              戻る
-            </Button>
-          ) : (
-            <Link href="/dashboard" className="flex-1">
-              <Button variant="outline" size="lg" className="w-full">
-                <ChevronLeft className="w-4 h-4" />
-                結果に戻る
-              </Button>
-            </Link>
-          )}
-
-          {/* 次へ / 保存して結果を見る */}
+        <div className="flex flex-col gap-3">
+          {/* 次へ / 保存して結果を見る（主要アクション・上段） */}
           {isLastStep ? (
             <motion.button
               type="button"
               onClick={handleDone}
-              className="flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-medium text-base text-white shadow-md"
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-medium text-sm text-white shadow-md"
               style={{ backgroundColor: '#d4af37' }}
               whileHover={{
                 scale: 1.02,
@@ -179,13 +159,33 @@ export default function OnboardingEditPage() {
           ) : (
             <Button
               variant="primary"
-              size="lg"
+              size="md"
               onClick={handleNext}
-              className="flex-1"
+              className="w-full"
             >
               次へ
               <ChevronRight className="w-4 h-4" />
             </Button>
+          )}
+
+          {/* 戻るボタン（下段） */}
+          {step > 0 ? (
+            <Button
+              variant="outline"
+              size="md"
+              onClick={handlePrev}
+              className="w-full"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              戻る
+            </Button>
+          ) : (
+            <Link href="/dashboard" className="w-full">
+              <Button variant="outline" size="md" className="w-full">
+                <ChevronLeft className="w-4 h-4" />
+                結果に戻る
+              </Button>
+            </Link>
           )}
         </div>
 

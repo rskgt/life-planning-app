@@ -159,20 +159,13 @@ export default function OnboardingPage() {
         )}
 
         {/* ── ナビゲーションボタン ── */}
-        <div className="flex gap-3">
-          <Link href="/" className="flex-1">
-            <Button variant="outline" size="lg" className="w-full">
-              <ChevronLeft className="w-4 h-4" />
-              最初に戻る
-            </Button>
-          </Link>
-
+        <div className="flex flex-col gap-3">
           <motion.button
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit}
             className={[
-              'flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-medium text-base text-white shadow-md transition-opacity',
+              'w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-medium text-sm text-white shadow-md transition-opacity',
               canSubmit ? '' : 'opacity-40 cursor-not-allowed',
             ].join(' ')}
             style={{ backgroundColor: '#d4af37' }}
@@ -185,6 +178,13 @@ export default function OnboardingPage() {
             <Sparkles className="w-4 h-4" />
             シミュレーションを開始
           </motion.button>
+
+          <Link href="/" className="w-full">
+            <Button variant="outline" size="md" className="w-full">
+              <ChevronLeft className="w-4 h-4" />
+              最初に戻る
+            </Button>
+          </Link>
         </div>
 
         {/* ── 注記 ── */}

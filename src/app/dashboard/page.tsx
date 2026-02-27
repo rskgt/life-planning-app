@@ -495,10 +495,10 @@ export default function DashboardPage() {
 
             <ConditionsSection data={data} editMode={editMode} />
 
-            <div className="mt-5 pt-4 border-t border-border-base flex gap-3">
+            <div className="mt-5 pt-4 border-t border-border-base flex flex-col gap-2.5">
               <motion.button
                 onClick={() => router.push('/onboarding/edit')}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-medium border-2 border-navy text-navy hover:bg-blue-light transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-medium border-2 border-navy text-navy hover:bg-blue-light transition-colors"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -508,7 +508,7 @@ export default function DashboardPage() {
 
               <motion.button
                 onClick={() => router.push('/')}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-medium text-subtle hover:text-muted transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-sm font-medium text-subtle hover:text-muted transition-colors"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
               >
