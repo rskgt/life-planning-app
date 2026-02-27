@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* ─── Figma ブランドカラー変数 ─── */
+:root {
+  --background: #f8fafc;
+  --foreground: #003366;
+
+  /* Brand */
+  --navy:        #003366;
+  --navy-dark:   #00264d;
+  --gold:        #d4af37;
+  --gold-light:  #fef9e7;
+
+  /* Surfaces */
+  --surface:     #ffffff;
+  --border-base: #e2e8f0;
+  --input-bg:    #f3f3f5;
+
+  /* Text */
+  --muted:       #64748b;
+  --subtle:      #94a3b8;
+
+  /* Accents */
+  --blue-light:  #e6f0ff;
+}
+
+/* ─── Tailwind v4: @theme で utility クラス化 ─── */
+@theme inline {
+  --color-background:  var(--background);
+  --color-foreground:  var(--foreground);
+  --font-sans:         var(--font-geist-sans);
+  --font-mono:         var(--font-geist-mono);
+
+  /* Brand utilities: bg-navy, text-gold, border-gold … */
+  --color-navy:        var(--navy);
+  --color-navy-dark:   var(--navy-dark);
+  --color-gold:        var(--gold);
+  --color-gold-light:  var(--gold-light);
+
+  /* Surface utilities */
+  --color-surface:     var(--surface);
+  --color-border-base: var(--border-base);
+  --color-input-bg:    var(--input-bg);
+
+  /* Text utilities */
+  --color-muted:       var(--muted);
+  --color-subtle:      var(--subtle);
+
+  /* Accent utilities */
+  --color-blue-light:  var(--blue-light);
+
+  /* Border radius */
+  --radius:    0.625rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* ─── range スライダーのクロスブラウザ共通スタイル ─── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 2.5px solid;          /* border-color は JS の style prop で設定 */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]:focus::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  border: 2.5px solid;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+}
