@@ -158,8 +158,9 @@ export function deriveDefaultsFromBasicInfo(
     monthlyPension: String(monthlyPension),
     severancePay:   String(severancePay),
 
-    // 住宅・介護・その他：オフ
+    // 住宅・介護・その他：オフ（購入予定年齢は現在年齢+3年後か35歳の遅い方）
     housingStatus:       'none',
+    housingPurchaseAge:  String(Math.max(35, age + 3)),
     applyIncomeDecline:  false,
     postRetirementWork:  false,
     expectParentCare:    false,

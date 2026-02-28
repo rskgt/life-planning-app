@@ -290,7 +290,9 @@ export function calculateSimulation(
     const loanAmount    = Math.max(0, housingCost - planningDownPayment)
     planningAnnualPayment = calculateMortgageAnnualPayment(loanAmount, loanYears, loanRate)
     planningLoanEndAge    = planningPurchaseAge + loanYears
-    validPlanning = planningPurchaseAge > currentAge && planningPurchaseAge <= MAX_AGE
+    // 購入年齢が現在以前でも「過去に買った・ローン継続中」として計算対象とする
+    // planningPurchaseAge === 0 はフィールド未入力扱いのためスキップ
+    validPlanning = planningPurchaseAge > 0 && planningPurchaseAge <= MAX_AGE
   }
 
   // existing（すでに購入済み）
@@ -332,7 +334,8 @@ export function calculateSimulation(
   if (severancePay > 0) retirementLabels.push('退職金')
   eventLabelMap.set(retirementAge, retirementLabels)
 
-  if (validPlanning) {
+  // 住宅購入イベントはシミュレーション期間内（未来）の場合のみ表示
+  if (validPlanning && planningPurchaseAge > currentAge) {
     eventLabelMap.set(planningPurchaseAge, [
       ...(eventLabelMap.get(planningPurchaseAge) ?? []),
       '住宅購入',
@@ -392,8 +395,10 @@ export function calculateSimulation(
     const age    = parseInt(expense.targetAge)
     const amount = parseFloat(expense.amount) || 0
     if (isNaN(age) || age <= currentAge || age > MAX_AGE) continue
-
-    eventLabelMap.set(age, [...(eventLabelMap.get(age) ?? []), expense.label])
+    // 金額が設定されている場合のみチャートにラベルを表示
+    if (amount > 0) {
+      eventLabelMap.set(age, [...(eventLabelMap.get(age) ?? []), expense.label])
+    }
     eventAmountMap.set(age, (eventAmountMap.get(age) ?? 0) + amount)
   }
 
@@ -504,16 +509,22 @@ export function calculateSimulation(
     const housingCostsStopped = willSell && age >= sellHouseAge
     if (!housingCostsStopped) {
       if (data.housingStatus === 'planning' && validPlanning) {
-        // 頭金（購入年のみ）
-        if (age === planningPurchaseAge) {
+        // 将来の購入か（購入年が現在より先）かで挙動を分岐
+        const purchaseFuture = planningPurchaseAge > currentAge
+        // ローン・維持費の開始年: 将来購入→購入年、過去/今年購入→シミュレーション初年度
+        const loanStart = purchaseFuture ? planningPurchaseAge : currentAge + 1
+
+        // 頭金（将来購入の場合のみ・購入年に一括）
+        // 過去・当年購入は頭金支払い済みとみなして差し引かない
+        if (purchaseFuture && age === planningPurchaseAge) {
           cashBalance -= planningDownPayment
         }
-        // ローン返済（購入年〜完済年まで）
-        if (age >= planningPurchaseAge && age < planningLoanEndAge) {
+        // ローン返済（loanStart〜完済年の前年まで）
+        if (age >= loanStart && age < planningLoanEndAge) {
           cashBalance -= planningAnnualPayment
         }
-        // 購入後は毎年維持費（固定資産税・修繕積立金等）を計上（名目額固定）
-        if (age >= planningPurchaseAge) {
+        // 住宅維持費（loanStart以降毎年・名目額固定）
+        if (age >= loanStart) {
           cashBalance -= HOUSING_MAINTENANCE_ANNUAL
         }
       } else if (data.housingStatus === 'existing') {
