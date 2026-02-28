@@ -72,8 +72,10 @@ export interface OnboardingData {
   // ── Step 3: 将来の目標・イベント ──
   retirementAge: string
 
-  // ── 公的年金（65 歳以降の世帯月額） ──
+  // ── 公的年金 ──
   monthlyPension: string
+  /** 年金受給開始年齢（60〜75 歳・繰り上げ/繰り下げで月額が増減） */
+  pensionStartAge: string
 
   // ── 住宅 ──
   housingStatus: HousingStatus
@@ -199,6 +201,7 @@ const initialData: OnboardingData = {
   nisaAnnualAmount: '20',
   retirementAge: '65',
   monthlyPension: '',
+  pensionStartAge: '65',
   housingStatus: 'none',
   housingPurchaseAge: '35',
   housingCost: '3000',

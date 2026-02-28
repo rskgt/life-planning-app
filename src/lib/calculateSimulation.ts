@@ -56,6 +56,82 @@ export function calculateIDeCoTaxBenefit(
   return idecoAnnual * 0.33
 }
 
+// ─── 退職金の税引き後受取額計算 ────────────────────────────
+
+/**
+ * 退職金の税引き後手取り額を計算する（退職所得控除 + 1/2 課税方式）。
+ * 勤続年数は「22 歳入社」と仮定して retirementAge - 22 で推計する。
+ *
+ * 退職所得控除:
+ *   勤続年数 20 年以下: max(80, 40 × 勤続年数) 万円
+ *   勤続年数 20 年超 : 800 + 70 × (勤続年数 - 20) 万円
+ *
+ * 課税退職所得 = max(0, (退職金 - 控除額) × 1/2)
+ * 上記に所得税（超過累進）+ 復興特別所得税（2.1%）+ 住民税（10%）を適用。
+ */
+export function calculateSeveranceNetAmount(
+  severancePay: number,
+  retirementAge: number,
+): number {
+  if (severancePay <= 0) return 0
+  const yearsOfService = Math.max(1, retirementAge - 22)
+  // 退職所得控除（万円）
+  const deduction = yearsOfService <= 20
+    ? Math.max(80, 40 * yearsOfService)
+    : 800 + 70 * (yearsOfService - 20)
+  // 課税退職所得（1/2 課税）
+  const taxableIncome = Math.max(0, (severancePay - deduction) * 0.5)
+  if (taxableIncome <= 0) return severancePay
+  // 所得税（超過累進）
+  let incomeTax: number
+  if (taxableIncome <= 195)       incomeTax = taxableIncome * 0.05
+  else if (taxableIncome <= 330)  incomeTax = taxableIncome * 0.10 - 9.75
+  else if (taxableIncome <= 695)  incomeTax = taxableIncome * 0.20 - 42.75
+  else if (taxableIncome <= 900)  incomeTax = taxableIncome * 0.23 - 63.6
+  else if (taxableIncome <= 1800) incomeTax = taxableIncome * 0.33 - 153.6
+  else                            incomeTax = taxableIncome * 0.40 - 279.6
+  incomeTax *= 1.021  // 復興特別所得税
+  const residentTax = taxableIncome * 0.10
+  return Math.max(0, severancePay - incomeTax - residentTax)
+}
+
+// ─── 公的年金の税引き後受取額計算 ──────────────────────────
+
+/**
+ * 公的年金の年間受給額から税引き後の実質受取額を計算する（65 歳以上）。
+ *
+ * 公的年金等控除（65 歳以上・2020 年度以降）:
+ *   年金額 ≤ 110 万円    → 全額控除（課税なし）
+ *   110 万 < ≤ 330 万   → 控除 110 万円
+ *   330 万 < ≤ 410 万   → 年金額 × 25% + 27.5 万円
+ *   410 万 < ≤ 770 万   → 年金額 × 15% + 68.5 万円
+ *   770 万超             → 年金額 × 5% + 145.5 万円
+ *
+ * 課税雑所得に所得税（累進）+ 住民税（10%）を適用。
+ */
+export function calculatePensionNetAnnual(annualPension: number): number {
+  if (annualPension <= 0) return 0
+  if (annualPension <= 110) return annualPension  // 全額非課税
+  let deduction: number
+  if (annualPension <= 330) {
+    deduction = 110
+  } else if (annualPension <= 410) {
+    deduction = annualPension * 0.25 + 27.5
+  } else if (annualPension <= 770) {
+    deduction = annualPension * 0.15 + 68.5
+  } else {
+    deduction = annualPension * 0.05 + 145.5
+  }
+  const miscIncome = Math.max(0, annualPension - deduction)
+  if (miscIncome <= 0) return annualPension
+  // 所得税（超過累進）+ 住民税（10%）の概算
+  let effectiveTaxRate: number
+  if (miscIncome <= 195)      effectiveTaxRate = 0.15  // 5% + 10%
+  else if (miscIncome <= 330) effectiveTaxRate = 0.20  // 10% + 10%
+  else                        effectiveTaxRate = 0.30  // 20% + 10%
+  return annualPension - miscIncome * effectiveTaxRate
+}
+
 // ─── 手取り年収の簡易計算 ────────────────────────────────
 
 /**
@@ -154,7 +230,7 @@ export function calculateMortgageAnnualPayment(
  *     2. キャッシュイン → 現金へ加算（インフレ倍率適用）:
  *        - 本人の手取り年収（額面から自動計算）: 本人年齢 ≦ retirementAge の期間
  *        - 配偶者の手取り年収: hasSpouse かつ 配偶者年齢 ≦ spouseRetirementAge の期間
- *        - 公的年金: 本人年齢 ≧ 65 の期間（名目額固定）
+ *        - 公的年金: pensionStartAge 以降（繰り上げ/繰り下げ調整・課税後）
  *     3. キャッシュアウト → 現金から減算（インフレ倍率適用）:
  *        - 基本生活費
  *        - 子どもの成長加算
@@ -173,9 +249,8 @@ export function calculateMortgageAnnualPayment(
  *   合計資産 = cashBalance + investmentBalance
  *
  * ■ インフレの扱い
- *   - 手取り収入・生活費・子ども成長費は inflationRate で毎年上昇
- *   - 公的年金・住宅・大きな支出・ローン返済額・住宅維持費は名目額のまま
- *   - 教育費テーブルも名目額のまま使用
+ *   - 手取り収入・生活費・子ども成長費・住宅維持費・売却後家賃・教育費は inflationRate で毎年上昇
+ *   - 公的年金・大きな支出・ローン返済額は名目額のまま（実質価値は目減り）
  */
 
 /** 住宅維持費（固定資産税＋修繕積立金等）の年間概算額（万円/年） */
@@ -208,6 +283,11 @@ export function calculateSimulation(
   const currentInvestments = Math.max(0, parseFloat(data.currentInvestments) || 0)
   // 確定拠出年金（iDeCoや企業型DC）― 流動性資産と分離して追跡
   const currentDC          = Math.max(0, parseFloat(data.currentDC ?? '0')   || 0)
+  // NISA 残高 ― 非NISA運用資産と分離して追跡（取り崩し時の税扱いが異なる）
+  const currentNISA        = Math.min(
+    Math.max(0, parseFloat(data.currentNISABalance ?? '0') || 0),
+    Math.max(0, currentInvestments - currentDC),
+  )
 
   // 手取り年収（額面から自動計算）― これをベースに収入カーブを適用する
   const grossAnnualIncome  = Math.max(0, parseFloat(data.annualIncome) || 0)
@@ -257,6 +337,13 @@ export function calculateSimulation(
   // 毎月の積立額（現金→運用へ移動する年間額）
   const annualInvestmentTransfer =
     Math.max(0, parseFloat(data.monthlyInvestmentAmount) || 0) * 12
+  // NISA 年間積立額（annualInvestmentTransfer の内数・nisaBalance へ移動する分）
+  const nisaAnnualContrib = data.nisaEnabled
+    ? Math.min(
+        Math.max(0, parseFloat(data.nisaAnnualAmount) || 0),
+        annualInvestmentTransfer,
+      )
+    : 0
 
   // 配偶者
   const spouseCurrentAge     = data.hasSpouse ? (parseInt(data.spouseAge) || 0) : 0
@@ -266,9 +353,15 @@ export function calculateSimulation(
   const spouseRetirementAge  = data.hasSpouse
     ? Math.max(1, parseInt(data.spouseRetirementAge) || 65) : 0
 
-  // 公的年金（名目固定）
-  const monthlyPension = Math.max(0, parseFloat(data.monthlyPension) || 0)
-  const PENSION_START  = 65
+  // 公的年金
+  const monthlyPension   = Math.max(0, parseFloat(data.monthlyPension) || 0)
+  // 年金受給開始年齢（60〜75 歳）と繰り上げ/繰り下げ調整係数
+  const pensionStartAge  = Math.min(75, Math.max(60, parseInt(data.pensionStartAge ?? '65') || 65))
+  const pensionMonthsDiff = (pensionStartAge - 65) * 12
+  const pensionAdjustFactor = pensionMonthsDiff < 0
+    ? Math.max(0, 1 + 0.004 * pensionMonthsDiff)  // 繰り上げ: 月 0.4% 減
+    : 1 + 0.007 * pensionMonthsDiff                // 繰り下げ: 月 0.7% 増
+  const adjustedMonthlyPension = monthlyPension * pensionAdjustFactor
 
   const rInvest = params.investmentRate / 100
   const rInflat = params.inflationRate  / 100
@@ -331,8 +424,15 @@ export function calculateSimulation(
   const eventAmountMap = new Map<number, number>()
 
   const retirementLabels: string[] = ['リタイア']
-  if (severancePay > 0) retirementLabels.push('退職金')
+  if (severancePay > 0) retirementLabels.push('退職金受取')
   eventLabelMap.set(retirementAge, retirementLabels)
+
+  if (pensionStartAge > currentAge && pensionStartAge <= MAX_AGE) {
+    eventLabelMap.set(pensionStartAge, [
+      ...(eventLabelMap.get(pensionStartAge) ?? []),
+      '年金受給開始',
+    ])
+  }
 
   // 住宅購入イベントはシミュレーション期間内（未来）の場合のみ表示
   if (validPlanning && planningPurchaseAge > currentAge) {
@@ -407,9 +507,12 @@ export function calculateSimulation(
   // 運用資産を流動性別に分離して追跡
   // liquidInvestmentBalance: DC 以外の流動性資産（60歳前でも取り崩し可能）
   // dcBalance: 確定拠出年金（DC_UNLOCK_AGE 歳まで取り崩し不可）
-  let cashBalance             = currentCash
-  let liquidInvestmentBalance = Math.max(0, currentInvestments - currentDC)
-  let dcBalance               = currentDC
+  let cashBalance         = currentCash
+  let nisaBalance         = currentNISA
+  // 非 NISA 流動性運用資産と元本（含み益に 20.315% 課税される）
+  let nonNisaLiquidBalance = Math.max(0, currentInvestments - currentDC - currentNISA)
+  let nonNisaCostBasis     = nonNisaLiquidBalance  // 初期残高を全額元本と仮定
+  let dcBalance            = currentDC
   let depletionAge: number | null = null
   let assetsAtRetirement = currentCash + currentInvestments
   let assetsAt80         = currentCash + currentInvestments
@@ -417,7 +520,7 @@ export function calculateSimulation(
   // 起点（現在年齢）を追加
   yearlyData.push({
     age:          currentAge,
-    assets:       Math.round(cashBalance + liquidInvestmentBalance + dcBalance),
+    assets:       Math.round(cashBalance + nisaBalance + nonNisaLiquidBalance + dcBalance),
     events:       [],
     isRetirement: false,
   })
@@ -426,14 +529,16 @@ export function calculateSimulation(
     const year       = age - currentAge
     const inflFactor = Math.pow(1 + rInflat, year)
 
-    // ① 運用リターン（流動性資産・DC ともに同じ利回りを適用）
-    liquidInvestmentBalance *= (1 + rInvest)
-    dcBalance               *= (1 + rInvest)
+    // ① 運用リターン（NISA・非NISA・DC ともに同じ利回りを適用）
+    nisaBalance          *= (1 + rInvest)
+    nonNisaLiquidBalance *= (1 + rInvest)
+    dcBalance            *= (1 + rInvest)
+    // nonNisaCostBasis は運用益では増えない（利益率が上昇する）
 
     // ② キャッシュイン → 現金へ加算（インフレ調整）
-    // 退職金（リタイア年齢時に一括加算・名目額固定）
+    // 退職金（リタイア年齢時に一括加算・退職所得控除+1/2課税方式で税引き後を計上）
     if (age === retirementAge && severancePay > 0) {
-      cashBalance += severancePay
+      cashBalance += calculateSeveranceNetAmount(severancePay, retirementAge)
     }
     // 本人収入 — 収入カーブを適用した多段階計算
     if (age <= retirementAge) {
@@ -458,9 +563,9 @@ export function calculateSimulation(
         cashBalance += netSpouseAnnualIncome * inflFactor
       }
     }
-    // 公的年金（65 歳以降・名目額固定）
-    if (age >= PENSION_START) {
-      cashBalance += monthlyPension * 12
+    // 公的年金（受給開始年齢以降・繰り上げ/繰り下げ調整済み・課税後を計上）
+    if (age >= pensionStartAge) {
+      cashBalance += calculatePensionNetAnnual(adjustedMonthlyPension * 12)
     }
 
     // ③ キャッシュアウト（生活費・インフレ調整）→ 現金から減算
@@ -487,11 +592,15 @@ export function calculateSimulation(
 
     // ④ 積立移動（現金 → 運用資産）
     // investmentEndAge を超えた年齢では積立を停止し、既存残高の運用益のみ計算するフェーズに移行
-    // ※ iDeCo・NISA の拠出額は monthlyInvestmentAmount（積立総額）の内数として扱う
+    // ※ iDeCo の拠出額は monthlyInvestmentAmount（積立総額）の内数として扱う
+    // ※ NISA 拠出分は nisaBalance へ、残りは nonNisaLiquidBalance へ移動
     if (age <= investmentEndAge) {
       if (annualInvestmentTransfer > 0) {
-        cashBalance              -= annualInvestmentTransfer
-        liquidInvestmentBalance  += annualInvestmentTransfer
+        const nonNisaContrib = annualInvestmentTransfer - nisaAnnualContrib
+        cashBalance          -= annualInvestmentTransfer
+        nisaBalance          += nisaAnnualContrib
+        nonNisaLiquidBalance += nonNisaContrib
+        nonNisaCostBasis     += nonNisaContrib  // 非NISA元本を積み増し
       }
     }
 
@@ -523,23 +632,23 @@ export function calculateSimulation(
         if (age >= loanStart && age < planningLoanEndAge) {
           cashBalance -= planningAnnualPayment
         }
-        // 住宅維持費（loanStart以降毎年・名目額固定）
+        // 住宅維持費（loanStart以降毎年・インフレ調整）
         if (age >= loanStart) {
-          cashBalance -= HOUSING_MAINTENANCE_ANNUAL
+          cashBalance -= HOUSING_MAINTENANCE_ANNUAL * inflFactor
         }
       } else if (data.housingStatus === 'existing') {
         // ローン返済（今年から残り期間まで）
         if (age <= existingLoanEndAge) {
           cashBalance -= existingAnnualPayment
         }
-        // 住宅維持費（今年から毎年・名目額固定）
-        cashBalance -= HOUSING_MAINTENANCE_ANNUAL
+        // 住宅維持費（今年から毎年・インフレ調整）
+        cashBalance -= HOUSING_MAINTENANCE_ANNUAL * inflFactor
       }
     }
 
-    // 売却後: 家賃発生（売却した翌年から）
+    // 売却後: 家賃発生（売却した翌年から・インフレ調整）
     if (willSell && age > sellHouseAge && postSellRentAnnual > 0) {
-      cashBalance -= postSellRentAnnual
+      cashBalance -= postSellRentAnnual * inflFactor
     }
 
     // ⑦ 介護費用 → 現金から減算（発生年から CARE_SPREAD_YEARS 年均等）
@@ -550,30 +659,46 @@ export function calculateSimulation(
       cashBalance -= selfCareAnnual
     }
 
-    // ⑧ 教育費（子どもごとに当該年齢を算出して現金から減算）
+    // ⑧ 教育費（子どもごとに当該年齢を算出して現金から減算・インフレ調整）
     for (const child of data.children) {
       const childCurrentAge = parseInt(child.currentAge) || 0
       const childAge = childCurrentAge + (age - currentAge)
       const customAmount = parseFloat(child.customAnnualAmount) || 0
-      cashBalance -= getChildAnnualEducationCost(child.educationCourse, childAge, customAmount)
+      cashBalance -= getChildAnnualEducationCost(child.educationCourse, childAge, customAmount) * inflFactor
     }
 
     // ⑨ 現金不足時の投資資産取り崩し（リバランス）
-    // 現金残高がマイナスになった場合、投資資産を売却して補填する。
-    // まず流動性資産から取り崩す。DC は DC_UNLOCK_AGE 歳以降のみ解禁。
-    if (cashBalance < 0 && liquidInvestmentBalance > 0) {
-      const withdrawal = Math.min(-cashBalance, liquidInvestmentBalance)
-      liquidInvestmentBalance -= withdrawal
-      cashBalance             += withdrawal
+    // 優先順位: NISA（非課税）→ 非NISA（含み益に 20.315% 課税）→ DC（60歳以降のみ）
+
+    // まず NISA から取り崩す（非課税・税負担なし）
+    if (cashBalance < 0 && nisaBalance > 0) {
+      const withdrawal = Math.min(-cashBalance, nisaBalance)
+      nisaBalance  -= withdrawal
+      cashBalance  += withdrawal
+    }
+    // 次に非 NISA から取り崩す（含み益部分に 20.315% 課税）
+    if (cashBalance < 0 && nonNisaLiquidBalance > 0) {
+      const withdrawal = Math.min(-cashBalance, nonNisaLiquidBalance)
+      // 含み益率（元本比率から算出）
+      const gainRatio = nonNisaLiquidBalance > 0
+        ? Math.max(0, 1 - nonNisaCostBasis / nonNisaLiquidBalance)
+        : 0
+      const gain = withdrawal * gainRatio
+      const tax  = gain * 0.2315
+      // 元本の按分減少
+      const costReduction = withdrawal * (1 - gainRatio)
+      nonNisaLiquidBalance -= withdrawal
+      nonNisaCostBasis      = Math.max(0, nonNisaCostBasis - costReduction)
+      cashBalance += withdrawal - tax  // 税額分を差し引いて補填
     }
     // DC は DC_UNLOCK_AGE 歳以降にアンロック（60歳まで取り崩し不可）
     if (cashBalance < 0 && age >= DC_UNLOCK_AGE && dcBalance > 0) {
       const withdrawal = Math.min(-cashBalance, dcBalance)
-      dcBalance    -= withdrawal
-      cashBalance  += withdrawal
+      dcBalance   -= withdrawal
+      cashBalance += withdrawal
     }
 
-    const totalAssets = cashBalance + liquidInvestmentBalance + dcBalance
+    const totalAssets = cashBalance + nisaBalance + nonNisaLiquidBalance + dcBalance
 
     // 資産枯渇チェック
     if (totalAssets < 0 && depletionAge === null) {

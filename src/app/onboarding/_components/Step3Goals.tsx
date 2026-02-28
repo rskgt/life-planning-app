@@ -799,23 +799,64 @@ export function Step3Goals() {
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-navy mb-2.5">
           <Landmark className="w-4 h-4" />
-          老後の公的年金（世帯月額・65 歳以降）
+          公的年金の基準月額（65 歳受給時・世帯）
         </label>
         <Input
           type="number"
           value={data.monthlyPension}
           onChange={(e) => setField('monthlyPension', e.target.value)}
           placeholder="20"
-          suffix="万円"
+          suffix="万円/月"
           min="0"
         />
         <div className="mt-2 px-3 py-2 rounded-lg bg-gold-light text-[11px] text-muted leading-relaxed space-y-0.5">
-          <p className="font-medium" style={{ color: '#d4af37' }}>目安</p>
+          <p className="font-medium" style={{ color: '#d4af37' }}>目安（65 歳受給の場合）</p>
           <p>・単身（会社員）: 約 15 万円/月</p>
           <p>・共働き（夫婦ともに会社員）: 約 25〜30 万円/月</p>
           <p>・専業主婦世帯: 約 20〜22 万円/月</p>
         </div>
       </div>
+
+      {/* 年金受給開始年齢 */}
+      {(() => {
+        const base = parseFloat(data.monthlyPension) || 0
+        const startAge = Math.min(75, Math.max(60, parseInt(data.pensionStartAge ?? '65') || 65))
+        const monthsDiff = (startAge - 65) * 12
+        const factor = monthsDiff < 0
+          ? Math.max(0, 1 + 0.004 * monthsDiff)
+          : 1 + 0.007 * monthsDiff
+        const adjusted = Math.round(base * factor * 10) / 10
+        const diff = startAge - 65
+        const pct = Math.round((factor - 1) * 1000) / 10
+
+        return (
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-navy mb-2.5">
+              <Landmark className="w-4 h-4" />
+              年金受給開始年齢
+            </label>
+            <Input
+              type="number"
+              value={data.pensionStartAge ?? '65'}
+              onChange={(e) => setField('pensionStartAge', e.target.value)}
+              placeholder="65"
+              suffix="歳"
+              min="60"
+              max="75"
+            />
+            <div className="mt-2 px-3 py-2 rounded-lg bg-gold-light text-[11px] text-muted leading-relaxed space-y-0.5">
+              <p>・60〜64 歳に繰り上げ: 月 0.4% 減額（最大 24% 減）</p>
+              <p>・66〜75 歳に繰り下げ: 月 0.7% 増額（最大 84% 増）</p>
+              {base > 0 && startAge !== 65 && (
+                <p className="font-medium mt-1" style={{ color: '#d4af37' }}>
+                  {diff < 0 ? `${Math.abs(diff)} 年繰り上げ` : `${diff} 年繰り下げ`}
+                  （{pct >= 0 ? '+' : ''}{pct}%）→ 約 {adjusted} 万円/月
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* 退職金（将来の一時金収入） */}
       <div>

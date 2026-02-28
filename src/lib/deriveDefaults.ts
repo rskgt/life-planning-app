@@ -154,9 +154,10 @@ export function deriveDefaultsFromBasicInfo(
     nisaAnnualAmount:   '20',
 
     // 老後
-    retirementAge:  '65',
-    monthlyPension: String(monthlyPension),
-    severancePay:   String(severancePay),
+    retirementAge:   '65',
+    monthlyPension:  String(monthlyPension),
+    pensionStartAge: '65',
+    severancePay:    String(severancePay),
 
     // 住宅・介護・その他：オフ（購入予定年齢は現在年齢+3年後か35歳の遅い方）
     housingStatus:       'none',
