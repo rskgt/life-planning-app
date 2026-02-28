@@ -1,6 +1,101 @@
 import type { Child, OnboardingData } from '@/store/useOnboardingStore'
 import { calculateNetAnnualIncome } from './calculateSimulation'
 
+// ─── 都道府県別 地域係数 ──────────────────────────────────────────────────
+//
+// 生活費倍率: 総務省「消費者物価地域差指数」2022 ＋ 住居費実勢を加味
+//   東京の住居費は全国平均比 2〜3倍のため CPI 指数より大きめに設定
+// 年収倍率 : 厚生労働省「賃金構造基本統計調査」2023
+//   全国平均 432万円を 1.00 として各都道府県を算出（全産業・男女計）
+//
+// ティア定義:
+//   tokyo      : 東京都                                           expense×1.35 / income×1.30
+//   urban_high : 神奈川県                                         expense×1.20 / income×1.14
+//   urban      : 大阪府・愛知県                                   expense×1.10 / income×1.05
+//   suburban   : 埼玉・千葉・京都・兵庫・静岡・広島・滋賀・奈良   expense×1.04 / income×1.00
+//   standard   : 宮城・福岡・茨城・栃木・群馬・新潟ほか地方中核    expense×0.97 / income×0.93
+//   rural      : 北海道・東北・四国・山陰・九州（福岡除く）        expense×0.93 / income×0.88
+//   okinawa    : 沖縄県                                           expense×0.90 / income×0.80
+
+type PrefectureTier = 'tokyo' | 'urban_high' | 'urban' | 'suburban' | 'standard' | 'rural' | 'okinawa'
+
+interface TierMultipliers {
+  income:  number // 年収倍率（全国平均比）
+  expense: number // 生活費倍率（全国平均比）
+}
+
+const TIER_MULTIPLIERS: Record<PrefectureTier, TierMultipliers> = {
+  tokyo:      { income: 1.30, expense: 1.35 },
+  urban_high: { income: 1.14, expense: 1.20 },
+  urban:      { income: 1.05, expense: 1.10 },
+  suburban:   { income: 1.00, expense: 1.04 },
+  standard:   { income: 0.93, expense: 0.97 },
+  rural:      { income: 0.88, expense: 0.93 },
+  okinawa:    { income: 0.80, expense: 0.90 },
+}
+
+const PREFECTURE_TIER: Record<string, PrefectureTier> = {
+  // 東京圏
+  '東京都': 'tokyo',
+  // 首都圏（高コスト）
+  '神奈川県': 'urban_high',
+  // 大都市
+  '大阪府': 'urban',
+  '愛知県': 'urban',
+  // 近郊都市
+  '埼玉県': 'suburban',
+  '千葉県': 'suburban',
+  '京都府': 'suburban',
+  '兵庫県': 'suburban',
+  '静岡県': 'suburban',
+  '広島県': 'suburban',
+  '滋賀県': 'suburban',
+  '奈良県': 'suburban',
+  // 地方中核都市（標準）
+  '宮城県': 'standard',
+  '福島県': 'standard',
+  '茨城県': 'standard',
+  '栃木県': 'standard',
+  '群馬県': 'standard',
+  '新潟県': 'standard',
+  '富山県': 'standard',
+  '石川県': 'standard',
+  '長野県': 'standard',
+  '岐阜県': 'standard',
+  '三重県': 'standard',
+  '和歌山県': 'standard',
+  '岡山県': 'standard',
+  '山梨県': 'standard',
+  '福岡県': 'standard',
+  // 地方（低コスト）
+  '北海道': 'rural',
+  '青森県': 'rural',
+  '岩手県': 'rural',
+  '秋田県': 'rural',
+  '山形県': 'rural',
+  '福井県': 'rural',
+  '鳥取県': 'rural',
+  '島根県': 'rural',
+  '山口県': 'rural',
+  '徳島県': 'rural',
+  '香川県': 'rural',
+  '愛媛県': 'rural',
+  '高知県': 'rural',
+  '佐賀県': 'rural',
+  '長崎県': 'rural',
+  '熊本県': 'rural',
+  '大分県': 'rural',
+  '宮崎県': 'rural',
+  '鹿児島県': 'rural',
+  // 沖縄
+  '沖縄県': 'okinawa',
+}
+
+function getPrefectureMultipliers(prefecture: string): TierMultipliers {
+  const tier = PREFECTURE_TIER[prefecture] ?? 'standard'
+  return TIER_MULTIPLIERS[tier]
+}
+
 // ─── 年収推計（国税庁「民間給与実態統計調査」参考・万円/年） ──────────
 
 /**
@@ -47,16 +142,39 @@ function estimateInvestments(age: number): number {
   return 800
 }
 
-// ─── 毎月の生活費推計（総務省「家計調査」参考） ──────────────────────
+// ─── 毎月の生活費推計（総務省「家計調査」世帯主年収5分位別・参考） ──────
 
 /**
- * 家族構成から毎月の基本生活費を推計する（万円/月）。
+ * 家族構成と世帯手取り月収から毎月の基本生活費（娯楽費含む）を推計する（万円/月）。
+ *
+ * 総務省「家計調査年報」2023 年収5分位別消費支出（二人以上世帯）をベースに、
+ * 単身世帯は同調査の単身データ（二人以上の約62%）を参考にモデル化。
+ *   第1五分位（〜349万）: ≒22万 / 第2（350〜525万）: ≒26万
+ *   第3（526〜709万）: ≒29万 / 第4（710〜999万）: ≒32万 / 第5（1000万〜）: ≒39万
+ * 子ども1人につき+3万円（食費・被服・習い事など）
  */
-function estimateMonthlyExpenses(hasSpouse: boolean, numChildren: number): number {
-  let base = hasSpouse ? 24 : 18
-  if (numChildren >= 1) base += 4
-  if (numChildren >= 2) base += 4
-  if (numChildren >= 3) base += 4
+function estimateMonthlyExpenses(
+  hasSpouse: boolean,
+  numChildren: number,
+  householdNetMonthly: number, // 世帯手取り月収（万円）
+): number {
+  let base: number
+  if (hasSpouse) {
+    // 二人以上世帯
+    if      (householdNetMonthly < 30) base = 22
+    else if (householdNetMonthly < 40) base = 25
+    else if (householdNetMonthly < 50) base = 28
+    else if (householdNetMonthly < 65) base = 31
+    else                               base = 36
+  } else {
+    // 単身世帯（二人以上の約62%水準）
+    if      (householdNetMonthly < 20) base = 14
+    else if (householdNetMonthly < 25) base = 17
+    else if (householdNetMonthly < 30) base = 19
+    else if (householdNetMonthly < 40) base = 22
+    else                               base = 25
+  }
+  base += numChildren * 3
   return base
 }
 
@@ -102,26 +220,32 @@ function estimateMonthlyPension(hasSpouse: boolean, spouseIncome: number): numbe
  *   住宅・介護・収入カーブ・iDeCo・NISA等：すべて無効（ユーザーが後から設定）
  */
 export function deriveDefaultsFromBasicInfo(
-  age:       number,
-  hasSpouse: boolean,
-  spouseAge: number,
-  children:  Child[],
+  age:        number,
+  hasSpouse:  boolean,
+  spouseAge:  number,
+  children:   Child[],
+  prefecture: string = '',
 ): Partial<OnboardingData> {
   const numChildren = children.length
+  const mult        = getPrefectureMultipliers(prefecture)
 
-  // 年収
-  const annualIncome       = estimateAnnualIncome(age)
+  // 年収（都道府県別倍率を適用）
+  const annualIncome       = Math.round(estimateAnnualIncome(age) * mult.income)
   const spouseAnnualIncome = hasSpouse
-    ? Math.round(estimateAnnualIncome(spouseAge) * 0.75)
+    ? Math.round(estimateAnnualIncome(spouseAge) * 0.75 * mult.income)
     : 0
 
-  // 資産
+  // 資産（地域差は小さいため倍率は適用しない）
   const currentCash        = estimateCash(age)
   const currentInvestments = estimateInvestments(age)
 
-  // 生活費・積立
-  const monthlyExpenses = estimateMonthlyExpenses(hasSpouse, numChildren)
-  const netAnnual       = calculateNetAnnualIncome(annualIncome)
+  // 生活費・積立（都道府県別倍率を適用）
+  const netAnnual           = calculateNetAnnualIncome(annualIncome)
+  const spouseNetAnnual     = hasSpouse ? calculateNetAnnualIncome(spouseAnnualIncome) : 0
+  const householdNetMonthly = Math.round((netAnnual + spouseNetAnnual) / 12 * 10) / 10
+  const monthlyExpenses     = Math.round(
+    estimateMonthlyExpenses(hasSpouse, numChildren, householdNetMonthly) * mult.expense
+  )
   // 手取りの10%を月割り（最低1万円）
   const monthlyInvestmentAmount = Math.max(1, Math.round((netAnnual * 0.10 / 12) * 10) / 10)
 

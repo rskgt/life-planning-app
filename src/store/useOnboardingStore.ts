@@ -30,6 +30,8 @@ export interface MajorExpense {
 export interface OnboardingData {
   // ── Step 1: 基本情報 ──
   age: string
+  /** 居住都道府県（初期設定の生活費・年収に影響） */
+  prefecture: string
   hasSpouse: boolean
   children: Child[]
 
@@ -181,6 +183,7 @@ function makeChild(): Child {
 
 const initialData: OnboardingData = {
   age: '',
+  prefecture: '',
   hasSpouse: false,
   children: [],
   spouseAge: '',
@@ -309,7 +312,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ step: 0, data: initialData, investmentRate: 3.0, inflationRate: 1.0 }),
     }),
     {
-      name: 'life-planning-store-v10',
+      name: 'life-planning-store-v11',
       // サーバーサイドでは no-op、クライアントサイドでは localStorage を使用
       storage: createJSONStorage(() =>
         typeof window !== 'undefined' ? localStorage : noopStorage

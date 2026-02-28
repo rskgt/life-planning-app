@@ -14,11 +14,12 @@ import { deriveDefaultsFromBasicInfo, buildDeriveSummary } from '@/lib/deriveDef
 
 // ─── 自動設定プレビュー ───────────────────────────────────────────────
 
-function AutoSettingsPreview({ age, hasSpouse, spouseAge, numChildren }: {
+function AutoSettingsPreview({ age, hasSpouse, spouseAge, numChildren, prefecture }: {
   age: number
   hasSpouse: boolean
   spouseAge: number
   numChildren: number
+  prefecture: string
 }) {
   const [open, setOpen] = useState(false)
 
@@ -31,7 +32,7 @@ function AutoSettingsPreview({ age, hasSpouse, spouseAge, numChildren }: {
     customAnnualAmount: '',
   }))
 
-  const derived  = deriveDefaultsFromBasicInfo(age, hasSpouse, spouseAge, children)
+  const derived  = deriveDefaultsFromBasicInfo(age, hasSpouse, spouseAge, children, prefecture)
   const items    = buildDeriveSummary(derived, hasSpouse)
 
   return (
@@ -106,6 +107,7 @@ export default function OnboardingPage() {
       data.hasSpouse,
       spouseAge,
       data.children,
+      data.prefecture,
     )
     setMultipleFields(derived)
     router.push('/dashboard')
@@ -146,7 +148,7 @@ export default function OnboardingPage() {
           <div className="px-6 pt-6 pb-4 border-b border-border-base">
             <h2 className="text-lg font-medium text-navy">基本情報を教えてください</h2>
             <p className="text-xs text-muted mt-0.5">
-              この5項目だけでシミュレーションを開始できます
+              この6項目だけでシミュレーションを開始できます
             </p>
           </div>
           <div className="px-6 py-6">
@@ -161,6 +163,7 @@ export default function OnboardingPage() {
             hasSpouse={data.hasSpouse}
             spouseAge={spouseAge}
             numChildren={data.children.length}
+            prefecture={data.prefecture}
           />
         )}
 

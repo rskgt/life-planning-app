@@ -696,7 +696,7 @@ export function Step2Financial() {
           <Field
             icon={TrendingDown}
             label="毎月の基本生活費"
-            hint="家賃・食費・光熱費・通信費など、毎月かかる費用の合計"
+            hint="家賃・食費・光熱費・通信費・娯楽費など、毎月かかる費用の合計"
           >
             <Input
               type="number"

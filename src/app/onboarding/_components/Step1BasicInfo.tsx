@@ -1,8 +1,23 @@
 'use client'
 
-import { Calendar, Users, Baby, User, Heart } from 'lucide-react'
+import { Calendar, MapPin, Users, Baby, User, Heart } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { useOnboardingStore } from '@/store/useOnboardingStore'
+
+// ─── 都道府県リスト ───────────────────────────────────────
+
+const PREFECTURES = [
+  '北海道',
+  '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県',
+  '岐阜県', '静岡県', '愛知県', '三重県',
+  '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
+  '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+  '徳島県', '香川県', '愛媛県', '高知県',
+  '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県',
+  '沖縄県',
+] as const
 
 // ─── ToggleGroup（内部専用）────────────────────────────
 
@@ -67,6 +82,42 @@ export function Step1BasicInfo() {
           min="18"
           max="80"
         />
+      </div>
+
+      {/* 居住都道府県 */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-navy mb-2.5">
+          <MapPin className="w-4 h-4" />
+          居住都道府県
+        </label>
+        <div className="relative">
+          <select
+            value={data.prefecture}
+            onChange={(e) => setField('prefecture', e.target.value)}
+            className={[
+              'w-full appearance-none rounded-xl border-2 px-4 py-3 pr-10 text-sm',
+              'bg-white outline-none transition-colors duration-150',
+              data.prefecture
+                ? 'border-navy text-navy font-medium'
+                : 'border-border-base text-muted',
+              'focus:border-navy',
+            ].join(' ')}
+          >
+            <option value="">選択してください</option>
+            {PREFECTURES.map((pref) => (
+              <option key={pref} value={pref}>{pref}</option>
+            ))}
+          </select>
+          {/* カスタム矢印 */}
+          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+            <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        <p className="text-xs text-muted mt-1.5">
+          生活費・年収の初期値に反映されます（後から変更可能）
+        </p>
       </div>
 
       {/* 配偶者の有無 */}

@@ -28,7 +28,7 @@ const SECTIONS: Section[] = [
   {
     id:        'financial',
     icon:      Wallet,
-    title:     '財務状況',
+    title:     '資産と収支',
     sub:       '資産・収入・積立・iDeCo・NISA',
     Component: Step2Financial,
   },

@@ -19,7 +19,7 @@ const features = [
   {
     icon: TrendingUp,
     label: '生涯資産シミュレーション',
-    desc: '30歳〜100歳の資産推移を自動で試算します',
+    desc: '20歳〜100歳の資産推移を自動で試算します',
   },
   {
     icon: Users,

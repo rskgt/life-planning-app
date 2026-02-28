@@ -16,7 +16,7 @@ import { Step3Goals } from '../_components/Step3Goals'
 
 // ─── 定数 ─────────────────────────────────────────────
 
-const STEP_LABELS = ['基本情報', '財務状況', '将来の目標'] as const
+const STEP_LABELS = ['基本情報', '資産と収支', '将来の目標'] as const
 
 const STEP_META = [
   {
@@ -24,7 +24,7 @@ const STEP_META = [
     sub:   '年齢・配偶者・子供の情報',
   },
   {
-    title: '財務状況を編集',
+    title: '資産と収支を編集',
     sub:   '資産・収入・積立・iDeCo・NISA',
   },
   {
@@ -72,11 +72,13 @@ export default function OnboardingEditPage() {
   const handleNext = () => {
     setDirection(1)
     setStep((s) => Math.min(s + 1, totalSteps - 1))
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   const handlePrev = () => {
     setDirection(-1)
     setStep((s) => Math.max(s - 1, 0))
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
   const handleDone = () => {

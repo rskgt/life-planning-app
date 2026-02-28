@@ -423,7 +423,7 @@ export default function DashboardPage() {
                   資産推移グラフ
                 </h2>
                 <p className="text-xs text-muted mt-0.5">
-                  {data.age || '30'}歳 〜 100歳までのシミュレーション
+                  {data.age || '20'}歳 〜 100歳までのシミュレーション
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0"

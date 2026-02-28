@@ -274,7 +274,7 @@ export function calculateSimulation(
   params: SimulationParams = { investmentRate: 3, inflationRate: 1 },
 ): SimulationResult {
   // ── パース ───────────────────────────────────────────
-  const currentAge    = Math.max(18, parseInt(data.age)           || 30)
+  const currentAge    = Math.max(18, parseInt(data.age)           || 20)
   const retirementAge = Math.max(currentAge + 1,
                           parseInt(data.retirementAge)            || 65)
 
