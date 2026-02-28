@@ -167,10 +167,10 @@ const DEFAULT_MAJOR_EXPENSES: MajorExpense[] = [
   { id: 'other', label: 'その他の支出', amount: '',    targetAge: '',   enabled: false },
 ]
 
-let _childIdCounter = 0
 function makeChild(): Child {
+  const id = `child-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
   return {
-    id: `child-${++_childIdCounter}`,
+    id,
     currentAge: '',
     educationCourse: 'all-public',
     customAnnualAmount: '',

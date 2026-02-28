@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -87,7 +87,13 @@ function AutoSettingsPreview({ age, hasSpouse, spouseAge, numChildren }: {
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { data, setMultipleFields } = useOnboardingStore()
+  const { data, setMultipleFields, reset } = useOnboardingStore()
+
+  // ページを開くたびに入力をリセット（前回のデータが残らないようにする）
+  useEffect(() => {
+    reset()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const age        = parseInt(data.age) || 0
   const spouseAge  = parseInt(data.spouseAge) || 30
